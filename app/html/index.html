@@ -131,8 +131,9 @@
           <tbody id="clients"></tbody>
         </table>
         <p class="muted" style="margin-bottom:0">
-          More clients than you expect here means the address has been shared
-          further than intended.
+          A client appears once it opens a connection to a forwarded port, not at
+          the moment its tunnel comes up. More clients than you expect means the
+          address has been shared further than intended.
         </p>
       </section>
 
@@ -278,12 +279,14 @@
         $("timing").textContent = timing;
 
         const clients = s.clients || [];
-        $("clientsSection").classList.toggle("hidden", clients.length === 0);
-        $("clients").innerHTML = clients.map((c) =>
-          "<tr><td class='mono'>" + esc(c.address) + "</td><td>" + c.active +
-          "</td><td>" + c.total + "</td><td>" +
-          (c.lastSeen ? new Date(c.lastSeen).toLocaleTimeString() : "") + "</td></tr>"
-        ).join("");
+        $("clientsSection").classList.toggle("hidden", !s.running);
+        $("clients").innerHTML = clients.length
+          ? clients.map((c) =>
+              "<tr><td class='mono'>" + esc(c.address) + "</td><td>" + c.active +
+              "</td><td>" + c.total + "</td><td>" +
+              (c.lastSeen ? new Date(c.lastSeen).toLocaleTimeString() : "") + "</td></tr>"
+            ).join("")
+          : "<tr><td colspan='4' class='muted'>No client has connected yet.</td></tr>";
         $("relayNote").classList.toggle("hidden", !s.running);
 
         $("ports").innerHTML = (s.ports || []).map((p) => {
