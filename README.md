@@ -53,10 +53,14 @@ no root privilege.
 
 | Package | AXIS OS | Architecture | Status |
 |---|---|---|---|
-| ACAP 4 | 12.10.68 - 13 | aarch64 | Supported |
-| ACAP 4 | 12.10.68 - 13 | armv7hf | Supported |
+| ACAP 4 | 12.10.68 - 13 | aarch64 | Tested on hardware |
+| ACAP 4 | 12.10.68 - 13 | armv7hf | Builds, **not yet run on a device** |
 
 The app runs as the unprivileged `sdk` user. It does not require root access.
+
+> **armv7hf is unverified.** It cross-compiles and packages correctly, and the
+> binary is confirmed 32-bit ARM, but no armv7hf device was available to run it
+> on. If you install it, please report whether it works.
 
 ## Installation
 

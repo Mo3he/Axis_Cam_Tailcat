@@ -3,6 +3,8 @@
 ## 0.6.0
 
 - Initial pre-release, tracking upstream tailcat v0.6.0.
+- Verified on an AXIS P3288-LV (ARTPEC-9, aarch64, AXIS OS 12.11). The armv7hf
+  package builds and is confirmed 32-bit ARM but has not been run on a device.
 - Forwards selected TCP ports (default 80, 443, 554, 22) over Tailscale's data
   plane with no account, no control plane, and no inbound ports.
 - Forwards to the device's own services, so connections are authenticated by
