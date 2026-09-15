@@ -74,7 +74,8 @@
       .addr {
         font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px;
         word-break: break-all; background: var(--bg); border: 1px solid var(--border);
-        border-radius: 6px; padding: 10px; margin-bottom: 10px;
+        border-radius: 6px; padding: 10px; margin-bottom: 10px; cursor: pointer;
+        user-select: all; -webkit-user-select: all;
       }
       .note { border-radius: 6px; padding: 10px 12px; font-size: 13px; margin-bottom: 12px; }
       .note.warn { background: var(--warn-bg); color: var(--warn); }
@@ -112,9 +113,9 @@
         </div>
         <p id="stoppedMsg" class="muted">The tunnel is stopped. No address exists.</p>
         <div id="relayNote" class="note warn hidden">
-          At least one client is connected over a relay rather than a direct
-          path. Relays are rate limited, so video may stutter or fail. RTSP in
-          particular is unlikely to be usable until a direct path is found.
+          If NAT traversal fails, traffic falls back to a shared relay. Relays are
+          rate limited, so video may stutter or fail. RTSP in particular is
+          unlikely to be usable on a relayed path.
         </div>
         <div class="row">
           <button id="startBtn" class="primary">Start</button>
@@ -124,11 +125,15 @@
       </section>
 
       <section id="clientsSection" class="hidden">
-        <h2>Connected clients</h2>
+        <h2>Clients seen</h2>
         <table>
-          <thead><tr><th>Client key</th><th>Path</th></tr></thead>
+          <thead><tr><th>Client address</th><th>Active</th><th>Total</th><th>Last activity</th></tr></thead>
           <tbody id="clients"></tbody>
         </table>
+        <p class="muted" style="margin-bottom:0">
+          More clients than you expect here means the address has been shared
+          further than intended.
+        </p>
       </section>
 
       <section>
@@ -275,9 +280,11 @@
         const clients = s.clients || [];
         $("clientsSection").classList.toggle("hidden", clients.length === 0);
         $("clients").innerHTML = clients.map((c) =>
-          "<tr><td class='mono'>" + esc(c.nodeKey) + "</td><td>" + esc(c.path) + "</td></tr>"
+          "<tr><td class='mono'>" + esc(c.address) + "</td><td>" + c.active +
+          "</td><td>" + c.total + "</td><td>" +
+          (c.lastSeen ? new Date(c.lastSeen).toLocaleTimeString() : "") + "</td></tr>"
         ).join("");
-        $("relayNote").classList.toggle("hidden", !s.anyRelayed);
+        $("relayNote").classList.toggle("hidden", !s.running);
 
         $("ports").innerHTML = (s.ports || []).map((p) => {
           const label = p.listening
@@ -291,6 +298,50 @@
       function esc(s) {
         return String(s == null ? "" : s).replace(/[&<>"']/g, (c) =>
           ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+      }
+
+      function selectAddress() {
+        const node = $("addr");
+        const range = document.createRange();
+        range.selectNodeContents(node);
+        const sel = window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+      }
+
+      // The async Clipboard API is unavailable over plain HTTP and is rejected
+      // inside the device UI's iframe unless the parent grants clipboard-write,
+      // so fall back to a selection-based copy that works in both cases.
+      function legacyCopy(text) {
+        const ta = document.createElement("textarea");
+        ta.value = text;
+        ta.setAttribute("readonly", "");
+        ta.style.position = "fixed";
+        ta.style.top = "-1000px";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, text.length);
+        let ok = false;
+        try {
+          ok = document.execCommand("copy");
+        } catch {
+          ok = false;
+        }
+        document.body.removeChild(ta);
+        return ok;
+      }
+
+      async function copyText(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          try {
+            await navigator.clipboard.writeText(text);
+            return true;
+          } catch {
+            // Falls through to the legacy path below.
+          }
+        }
+        return legacyCopy(text);
       }
 
       async function loadSettings() {
@@ -376,14 +427,16 @@
         await post("forget-key");
       };
       $("copyBtn").onclick = async () => {
-        try {
-          await navigator.clipboard.writeText($("addr").textContent);
+        const ok = await copyText($("addr").textContent);
+        if (ok) {
           $("copyMsg").textContent = "Copied.";
-        } catch {
-          $("copyMsg").textContent = "Copy failed, select the text manually.";
+        } else {
+          selectAddress();
+          $("copyMsg").textContent = "Copy blocked by the browser. Address selected, press Ctrl/Cmd+C.";
         }
-        setTimeout(() => ($("copyMsg").textContent = ""), 3000);
+        setTimeout(() => ($("copyMsg").textContent = ""), 6000);
       };
+      $("addr").onclick = selectAddress;
 
       loadSettings().catch((e) => showAlert("Cannot load settings: " + e.message));
       refreshStatus();

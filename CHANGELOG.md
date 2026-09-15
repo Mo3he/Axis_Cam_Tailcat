@@ -15,6 +15,6 @@
   subnets.
 - Optional client key allow-list.
 - Optional auto-stop after inactivity or after a fixed time.
-- Web UI shows the address, connected clients, and whether each path is direct
-  or relayed.
+- Web UI shows the address, and lists connected clients with active and total
+  connection counts so a leaked address is visible.
 - The tailcat address is never written to the system log.

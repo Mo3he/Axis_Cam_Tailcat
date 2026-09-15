@@ -125,10 +125,15 @@ explicit list of subnets.
 
 If NAT traversal fails, traffic falls back to a DERP relay. Tailscale's public
 relays are rate limited and offer no uptime guarantee, so RTSP and other video
-is unlikely to be usable on a relayed path. The web UI shows whether each
-client is direct or relayed. Run [your own DERP
+is unlikely to be usable on a relayed path. Run [your own DERP
 server](https://github.com/tailscale/tailscale/tree/main/cmd/derper#derp) and
 set a custom DERP map URL if you need dependable throughput.
+
+The web UI lists the clients that have connected, with active and total
+connection counts, so an address shared further than intended is visible.
+Whether a given path is direct or relayed is not shown: upstream's
+`Server.Status` reports no peer detail, because it builds its status with
+`WantPeers` unset.
 
 ## Ports and privileges
 

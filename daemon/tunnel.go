@@ -10,6 +10,7 @@ import (
 	"net/netip"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -25,14 +26,114 @@ import (
 // slow answer means the service is down rather than far away.
 const dialTimeout = 5 * time.Second
 
-// ClientInfo describes one connected tailcat client for the UI. The path tells
-// an operator whether traffic is peer-to-peer or going through a rate-limited
-// public DERP relay, which is the usual explanation for poor video.
+// ClientInfo describes one connected tailcat client for the UI, so an operator
+// can tell whether the address has been used by more peers than expected.
+//
+// Per-path direct/relayed detail is deliberately absent: tailcat's
+// Server.Status builds an ipnstate.StatusBuilder with WantPeers false, and both
+// magicsock and wgengine skip peer reporting in that case, so the peer map is
+// always empty. Tracked here from live connections instead.
 type ClientInfo struct {
-	NodeKey  string `json:"nodeKey"`
-	Path     string `json:"path"`
-	Relayed  bool   `json:"relayed"`
-	LastSeen string `json:"lastSeen,omitempty"`
+	Address   string `json:"address"`
+	Active    int    `json:"active"`
+	Total     int    `json:"total"`
+	FirstSeen string `json:"firstSeen"`
+	LastSeen  string `json:"lastSeen"`
+}
+
+// clientTracker records live tunnel connections per client address.
+type clientTracker struct {
+	mu      sync.Mutex
+	clients map[string]*clientEntry
+	lastAct time.Time
+}
+
+type clientEntry struct {
+	active    int
+	total     int
+	firstSeen time.Time
+	lastSeen  time.Time
+}
+
+func newClientTracker() *clientTracker {
+	return &clientTracker{clients: map[string]*clientEntry{}, lastAct: time.Now()}
+}
+
+func (t *clientTracker) open(remote net.Addr) string {
+	key := clientKeyOf(remote)
+	now := time.Now()
+
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	e := t.clients[key]
+	if e == nil {
+		e = &clientEntry{firstSeen: now}
+		t.clients[key] = e
+	}
+	e.active++
+	e.total++
+	e.lastSeen = now
+	t.lastAct = now
+	return key
+}
+
+func (t *clientTracker) close(key string) {
+	now := time.Now()
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if e := t.clients[key]; e != nil {
+		if e.active > 0 {
+			e.active--
+		}
+		e.lastSeen = now
+	}
+	t.lastAct = now
+}
+
+func (t *clientTracker) snapshot() []ClientInfo {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	out := make([]ClientInfo, 0, len(t.clients))
+	for addr, e := range t.clients {
+		out = append(out, ClientInfo{
+			Address:   addr,
+			Active:    e.active,
+			Total:     e.total,
+			FirstSeen: e.firstSeen.UTC().Format(time.RFC3339),
+			LastSeen:  e.lastSeen.UTC().Format(time.RFC3339),
+		})
+	}
+	slices.SortFunc(out, func(a, b ClientInfo) int { return strings.Compare(a.Address, b.Address) })
+	return out
+}
+
+// idleSince reports how long the tunnel has had no connection activity.
+func (t *clientTracker) idleSince() time.Time {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.anyActiveLocked() {
+		return time.Now()
+	}
+	return t.lastAct
+}
+
+func (t *clientTracker) anyActiveLocked() bool {
+	for _, e := range t.clients {
+		if e.active > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+func clientKeyOf(remote net.Addr) string {
+	if remote == nil {
+		return "unknown"
+	}
+	if ap, err := netip.ParseAddrPort(remote.String()); err == nil {
+		return ap.Addr().String()
+	}
+	return remote.String()
 }
 
 // PortInfo reports whether the camera is actually listening on a forwarded
@@ -53,7 +154,6 @@ type Status struct {
 	Clients     []ClientInfo `json:"clients"`
 	Ports       []PortInfo   `json:"ports"`
 	ExitNode    string       `json:"exitNode"`
-	AnyRelayed  bool         `json:"anyRelayed"`
 	LastError   string       `json:"lastError,omitempty"`
 	TailcatVers string       `json:"tailcatVersion"`
 }
@@ -62,6 +162,7 @@ type Status struct {
 type Manager struct {
 	store   *Store
 	keyPath string
+	clients *clientTracker
 
 	mu        sync.Mutex
 	srv       *tailcat.Server
@@ -71,11 +172,14 @@ type Manager struct {
 	pinned    bool
 	lastErr   string
 	stopTimer *time.Timer
-	lastSeen  time.Time
 }
 
 func NewManager(store *Store, stateDir string) *Manager {
-	return &Manager{store: store, keyPath: filepath.Join(stateDir, "key.json")}
+	return &Manager{
+		store:   store,
+		keyPath: filepath.Join(stateDir, "key.json"),
+		clients: newClientTracker(),
+	}
 }
 
 // Start brings the tunnel up using the current configuration. It is a no-op if
@@ -125,8 +229,11 @@ func (m *Manager) Start() error {
 		if !allowed[port] {
 			return nil
 		}
-		m.touch()
-		return func(c net.Conn) { proxyTCP(c, fmt.Sprintf("127.0.0.1:%d", port), logf) }
+		return func(c net.Conn) {
+			key := m.clients.open(c.RemoteAddr())
+			defer m.clients.close(key)
+			proxyTCP(c, fmt.Sprintf("127.0.0.1:%d", port), logf)
+		}
 	}
 
 	if cfg.ExitNodeMode != ExitNodeOff {
@@ -152,15 +259,19 @@ func (m *Manager) Start() error {
 			if !permit(dst) {
 				return nil
 			}
-			m.touch()
-			return func(c net.Conn) { proxyTCP(c, dst.String(), logf) }
+			return func(c net.Conn) {
+				key := m.clients.open(c.RemoteAddr())
+				defer m.clients.close(key)
+				proxyTCP(c, dst.String(), logf)
+			}
 		}
 		srv.OnUDPForward = func(dst netip.AddrPort) func(tailcat.ConnPacketConn) {
 			if !permit(dst) {
 				return nil
 			}
-			m.touch()
 			return func(c tailcat.ConnPacketConn) {
+				key := m.clients.open(c.RemoteAddr())
+				defer m.clients.close(key)
 				up, err := net.DialUDP("udp", nil, net.UDPAddrFromAddrPort(dst))
 				if err != nil {
 					c.Close()
@@ -189,7 +300,7 @@ func (m *Manager) Start() error {
 	m.srv = srv
 	m.addr = string(srv.TailcatAddr())
 	m.startedAt = time.Now()
-	m.lastSeen = m.startedAt
+	m.clients = newClientTracker()
 	m.pinned = pinned
 	m.lastErr = ""
 	m.armAutoStopLocked(cfg)
@@ -250,32 +361,8 @@ func (m *Manager) Status() Status {
 	if !m.stopsAt.IsZero() {
 		st.StopsAt = m.stopsAt.UTC().Format(time.RFC3339)
 	}
-
-	for _, peer := range m.srv.Status().Peer {
-		info := ClientInfo{NodeKey: peer.PublicKey.String()}
-		switch {
-		case peer.CurAddr != "":
-			info.Path = "direct " + peer.CurAddr
-		case peer.Relay != "":
-			info.Path = "relayed via " + peer.Relay
-			info.Relayed = true
-			st.AnyRelayed = true
-		default:
-			info.Path = "connecting"
-		}
-		if !peer.LastSeen.IsZero() {
-			info.LastSeen = peer.LastSeen.UTC().Format(time.RFC3339)
-		}
-		st.Clients = append(st.Clients, info)
-	}
+	st.Clients = m.clients.snapshot()
 	return st
-}
-
-// touch records activity for the idle auto-stop timer.
-func (m *Manager) touch() {
-	m.mu.Lock()
-	m.lastSeen = time.Now()
-	m.mu.Unlock()
 }
 
 // armAutoStopLocked schedules the auto-stop timer. m.mu must be held.
@@ -301,7 +388,7 @@ func (m *Manager) onAutoStop(cfg Config) {
 		return
 	}
 	if cfg.AutoStopMode == AutoStopIdle {
-		idle := time.Since(m.lastSeen)
+		idle := time.Since(m.clients.idleSince())
 		want := time.Duration(cfg.AutoStopMinutes) * time.Minute
 		if idle < want {
 			// Activity since the timer was armed: wait out the remainder.
