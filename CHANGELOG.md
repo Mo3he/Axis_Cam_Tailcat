@@ -1,7 +1,5 @@
 # Changelog
 
-## Unreleased
-
 ## 0.6.0
 
 - Initial pre-release, tracking upstream tailcat v0.6.0.
