@@ -10,7 +10,12 @@
       "version": "0.6.0",
       "architecture": "BUILDARCH",
       "runMode": "respawn",
-      "compatibleOsVersions": [{ "min": "12.10.68", "max": "13" }]
+      "compatibleOsVersions": [
+        {
+          "min": "12.10.68",
+          "max": "13"
+        }
+      ]
     },
     "configuration": {
       "settingPage": "index.html",
