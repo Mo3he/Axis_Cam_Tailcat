@@ -1,0 +1,26 @@
+{
+  "app": "Tailcat",
+  "friendlyName": "Tailcat",
+  "versionPolicy": "mirror",
+  "upstream": {
+    "type": "github-release",
+    "repo": "tailscale/tailcat",
+    "stripV": true,
+    "name": "tailcat",
+    "changesUrl": "https://github.com/tailscale/tailcat/releases/tag/v${UPSTREAM}"
+  },
+  "build": {
+    "command": "./build.sh",
+    "env": {}
+  },
+  "pins": [
+    {
+      "file": "go.mod",
+      "goModule": "github.com/tailscale/tailcat",
+      "prefix": "v"
+    }
+  ],
+  "signing": {
+    "skip": []
+  }
+}

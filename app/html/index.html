@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tailcat</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #f5f6f8;
+        --card: #ffffff;
+        --text: #1c1f24;
+        --muted: #5b636e;
+        --border: #d8dce2;
+        --accent: #0b6ec4;
+        --ok: #1f7a3d;
+        --warn: #8a5a00;
+        --warn-bg: #fff6e0;
+        --danger: #a32020;
+        --danger-bg: #fdeaea;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #16191d;
+          --card: #1e2228;
+          --text: #e7eaee;
+          --muted: #9aa3ae;
+          --border: #333a43;
+          --accent: #4da3ff;
+          --ok: #5ec27e;
+          --warn: #e0b055;
+          --warn-bg: #2e2617;
+          --danger: #f08080;
+          --danger-bg: #2e1a1a;
+        }
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: var(--bg);
+        color: var(--text);
+        font: 14px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      main { max-width: 720px; margin: 0 auto; }
+      h1 { font-size: 20px; margin: 0; }
+      h2 { font-size: 15px; margin: 0 0 12px; }
+      section {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+      .pill { font-size: 12px; padding: 3px 10px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+      .pill.on { color: var(--ok); border-color: var(--ok); }
+      button {
+        font: inherit; padding: 7px 14px; border-radius: 6px;
+        border: 1px solid var(--border); background: var(--card); color: var(--text); cursor: pointer;
+      }
+      button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+      button:disabled { opacity: .5; cursor: default; }
+      label { display: block; margin-bottom: 12px; }
+      label > span { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+      input[type="text"], input[type="number"], select, textarea {
+        font: inherit; width: 100%; box-sizing: border-box; padding: 7px 9px;
+        border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text);
+      }
+      textarea { min-height: 62px; resize: vertical; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; }
+      .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+      .check { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 12px; }
+      .check input { margin-top: 3px; }
+      .check span { color: var(--muted); font-size: 13px; }
+      .addr {
+        font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px;
+        word-break: break-all; background: var(--bg); border: 1px solid var(--border);
+        border-radius: 6px; padding: 10px; margin-bottom: 10px;
+      }
+      .note { border-radius: 6px; padding: 10px 12px; font-size: 13px; margin-bottom: 12px; }
+      .note.warn { background: var(--warn-bg); color: var(--warn); }
+      .note.danger { background: var(--danger-bg); color: var(--danger); }
+      table { width: 100%; border-collapse: collapse; font-size: 13px; }
+      th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+      th { color: var(--muted); font-weight: 500; }
+      .mono { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; word-break: break-all; }
+      .muted { color: var(--muted); }
+      .hidden { display: none; }
+      footer { color: var(--muted); font-size: 12px; text-align: center; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <header>
+        <h1>Tailcat</h1>
+        <span id="statePill" class="pill">checking…</span>
+      </header>
+
+      <div id="alert" class="note danger hidden"></div>
+
+      <section>
+        <h2>Tunnel</h2>
+        <div id="addrBlock" class="hidden">
+          <div id="addr" class="addr"></div>
+          <div class="row" style="margin-bottom:10px">
+            <button id="copyBtn">Copy address</button>
+            <span id="copyMsg" class="muted"></span>
+          </div>
+          <div class="note warn">
+            This address is the credential. Anyone who has it can reach the
+            forwarded ports. Share it over a private channel only.
+          </div>
+        </div>
+        <p id="stoppedMsg" class="muted">The tunnel is stopped. No address exists.</p>
+        <div id="relayNote" class="note warn hidden">
+          At least one client is connected over a relay rather than a direct
+          path. Relays are rate limited, so video may stutter or fail. RTSP in
+          particular is unlikely to be usable until a direct path is found.
+        </div>
+        <div class="row">
+          <button id="startBtn" class="primary">Start</button>
+          <button id="stopBtn">Stop</button>
+          <span id="timing" class="muted"></span>
+        </div>
+      </section>
+
+      <section id="clientsSection" class="hidden">
+        <h2>Connected clients</h2>
+        <table>
+          <thead><tr><th>Client key</th><th>Path</th></tr></thead>
+          <tbody id="clients"></tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Forwarded ports</h2>
+        <table>
+          <thead><tr><th>Port</th><th>Camera service</th></tr></thead>
+          <tbody id="ports"></tbody>
+        </table>
+        <p class="muted" style="margin-bottom:0">
+          Ports are forwarded to this device's own services. Connections are
+          authenticated by the camera, not by this app.
+        </p>
+      </section>
+
+      <section>
+        <h2>Settings</h2>
+
+        <label>
+          <span>Forwarded TCP ports (comma separated)</span>
+          <input type="text" id="ports_in" placeholder="80, 443, 554, 22" />
+        </label>
+
+        <div class="check">
+          <input type="checkbox" id="autoStart" />
+          <label for="autoStart" style="margin:0">Start the tunnel automatically when the app starts
+            <span>Leave off so the tunnel only exists when you deliberately open it.</span>
+          </label>
+        </div>
+
+        <div class="check">
+          <input type="checkbox" id="pinAddress" />
+          <label for="pinAddress" style="margin:0">Keep the same address across restarts
+            <span>Off means a fresh address each start and the old one dies for good.
+              On means anyone you have ever shared it with can reconnect later.</span>
+          </label>
+        </div>
+
+        <label>
+          <span>Exit node (let clients reach this device's network)</span>
+          <select id="exitNodeMode">
+            <option value="off">Off</option>
+            <option value="restricted">Restricted to listed subnets</option>
+            <option value="full">Full access to everything this device can reach</option>
+          </select>
+        </label>
+        <div id="exitWarn" class="note danger hidden">
+          Full exit node access turns this device into a route into the local
+          network for anyone holding the address. Prefer restricting to the
+          subnets you actually need.
+        </div>
+        <label id="exitAllowWrap" class="hidden">
+          <span>Allowed subnets, one CIDR per line</span>
+          <textarea id="exitNodeAllow" placeholder="192.168.1.0/24"></textarea>
+        </label>
+
+        <label>
+          <span>Allowed client keys, one per line (empty means any client with the address)</span>
+          <textarea id="allowedClients" placeholder="nodekey:abc123…"></textarea>
+        </label>
+
+        <div class="row">
+          <label style="flex:1; min-width:200px">
+            <span>Auto-stop</span>
+            <select id="autoStopMode">
+              <option value="off">Off</option>
+              <option value="idle">After inactivity</option>
+              <option value="absolute">After a fixed time</option>
+            </select>
+          </label>
+          <label style="flex:1; min-width:140px">
+            <span>Minutes</span>
+            <input type="number" id="autoStopMinutes" min="1" />
+          </label>
+        </div>
+
+        <label>
+          <span>Custom DERP map URL (blank uses Tailscale's public relays)</span>
+          <input type="text" id="derpMapUrl" placeholder="https://example.com/derpmap.json" />
+        </label>
+
+        <div class="check">
+          <input type="checkbox" id="verbose" />
+          <label for="verbose" style="margin:0">Verbose logging
+            <span>Logs connection diagnostics to the system log. The address is never logged.</span>
+          </label>
+        </div>
+
+        <div class="row">
+          <button id="saveBtn" class="primary">Save settings</button>
+          <button id="forgetBtn">Forget pinned address</button>
+          <span id="saveMsg" class="muted"></span>
+        </div>
+      </section>
+
+      <footer>
+        Tailcat ACAP &middot; tailcat <span id="ver"></span>.
+        Tailscale and Tailcat are trademarks of Tailscale Inc. This app is not
+        affiliated with or endorsed by Tailscale.
+      </footer>
+    </main>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const api = (p, opts) => fetch("api/" + p, Object.assign({ cache: "no-store", credentials: "same-origin" }, opts));
+
+      let pollTimer = null;
+
+      function showAlert(msg) {
+        const el = $("alert");
+        if (!msg) { el.classList.add("hidden"); return; }
+        el.textContent = msg;
+        el.classList.remove("hidden");
+      }
+
+      async function refreshStatus() {
+        try {
+          const r = await api("status");
+          if (!r.ok) throw new Error("status " + r.status);
+          renderStatus(await r.json());
+        } catch (e) {
+          showAlert("Cannot reach the Tailcat service: " + e.message);
+        }
+      }
+
+      function renderStatus(s) {
+        $("ver").textContent = s.tailcatVersion || "";
+        $("statePill").textContent = s.running ? "running" : "stopped";
+        $("statePill").classList.toggle("on", !!s.running);
+        $("startBtn").disabled = !!s.running;
+        $("stopBtn").disabled = !s.running;
+
+        if (s.lastError) showAlert(s.lastError); else showAlert("");
+
+        $("addrBlock").classList.toggle("hidden", !s.running);
+        $("stoppedMsg").classList.toggle("hidden", !!s.running);
+        if (s.running) $("addr").textContent = s.address || "";
+
+        let timing = "";
+        if (s.startedAt) timing = "Started " + new Date(s.startedAt).toLocaleTimeString();
+        if (s.stopsAt) timing += " · stops " + new Date(s.stopsAt).toLocaleTimeString();
+        if (s.pinned && s.running) timing += " · pinned address";
+        $("timing").textContent = timing;
+
+        const clients = s.clients || [];
+        $("clientsSection").classList.toggle("hidden", clients.length === 0);
+        $("clients").innerHTML = clients.map((c) =>
+          "<tr><td class='mono'>" + esc(c.nodeKey) + "</td><td>" + esc(c.path) + "</td></tr>"
+        ).join("");
+        $("relayNote").classList.toggle("hidden", !s.anyRelayed);
+
+        $("ports").innerHTML = (s.ports || []).map((p) => {
+          const label = p.listening
+            ? "<span style='color:var(--ok)'>listening</span>"
+            : "<span style='color:var(--warn)'>not listening" +
+              (p.port === 22 ? " (enable SSH on this device to use port 22)" : "") + "</span>";
+          return "<tr><td>" + p.port + "</td><td>" + label + "</td></tr>";
+        }).join("");
+      }
+
+      function esc(s) {
+        return String(s == null ? "" : s).replace(/[&<>"']/g, (c) =>
+          ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+      }
+
+      async function loadSettings() {
+        const r = await api("settings");
+        const c = await r.json();
+        $("ports_in").value = (c.ports || []).join(", ");
+        $("autoStart").checked = !!c.autoStart;
+        $("pinAddress").checked = !!c.pinAddress;
+        $("exitNodeMode").value = c.exitNodeMode || "off";
+        $("exitNodeAllow").value = (c.exitNodeAllow || []).join("\n");
+        $("allowedClients").value = (c.allowedClients || []).join("\n");
+        $("autoStopMode").value = c.autoStopMode || "off";
+        $("autoStopMinutes").value = c.autoStopMinutes || 60;
+        $("derpMapUrl").value = c.derpMapUrl || "";
+        $("verbose").checked = !!c.verbose;
+        syncExitNode();
+      }
+
+      function syncExitNode() {
+        const mode = $("exitNodeMode").value;
+        $("exitAllowWrap").classList.toggle("hidden", mode !== "restricted");
+        $("exitWarn").classList.toggle("hidden", mode !== "full");
+      }
+
+      function lines(id) {
+        return $(id).value.split("\n").map((s) => s.trim()).filter(Boolean);
+      }
+
+      async function saveSettings() {
+        const ports = $("ports_in").value.split(",").map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n));
+        const body = {
+          autoStart: $("autoStart").checked,
+          ports: ports,
+          pinAddress: $("pinAddress").checked,
+          exitNodeMode: $("exitNodeMode").value,
+          exitNodeAllow: lines("exitNodeAllow"),
+          allowedClients: lines("allowedClients"),
+          autoStopMode: $("autoStopMode").value,
+          autoStopMinutes: parseInt($("autoStopMinutes").value, 10) || 60,
+          derpMapUrl: $("derpMapUrl").value.trim(),
+          verbose: $("verbose").checked,
+        };
+        if (body.exitNodeMode === "full" &&
+            !confirm("Full exit node access lets any client with the address reach this device's entire network. Continue?")) {
+          return;
+        }
+        $("saveBtn").disabled = true;
+        try {
+          const r = await api("settings", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || "save failed");
+          $("saveMsg").textContent = "Saved.";
+          setTimeout(() => ($("saveMsg").textContent = ""), 3000);
+          await refreshStatus();
+        } catch (e) {
+          $("saveMsg").textContent = e.message;
+        } finally {
+          $("saveBtn").disabled = false;
+        }
+      }
+
+      async function post(path) {
+        try {
+          const r = await api(path, { method: "POST" });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error || path + " failed");
+          renderStatus(data);
+        } catch (e) {
+          showAlert(e.message);
+        }
+      }
+
+      $("startBtn").onclick = () => post("start");
+      $("stopBtn").onclick = () => post("stop");
+      $("saveBtn").onclick = saveSettings;
+      $("exitNodeMode").onchange = syncExitNode;
+      $("forgetBtn").onclick = async () => {
+        if (!confirm("Delete the pinned key? Its address stops working permanently.")) return;
+        await post("forget-key");
+      };
+      $("copyBtn").onclick = async () => {
+        try {
+          await navigator.clipboard.writeText($("addr").textContent);
+          $("copyMsg").textContent = "Copied.";
+        } catch {
+          $("copyMsg").textContent = "Copy failed, select the text manually.";
+        }
+        setTimeout(() => ($("copyMsg").textContent = ""), 3000);
+      };
+
+      loadSettings().catch((e) => showAlert("Cannot load settings: " + e.message));
+      refreshStatus();
+      pollTimer = setInterval(refreshStatus, 5000);
+    </script>
+  </body>
+</html>

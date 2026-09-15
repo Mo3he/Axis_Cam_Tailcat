@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "2.0.0",
+  "acapPackageConf": {
+    "setup": {
+      "appName": "Tailcat",
+      "friendlyName": "Tailcat",
+      "vendor": "moshe@mohome.net",
+      "vendorId": "70ee172dd9",
+      "vendorUrl": "https://github.com/Mo3he/Axis_Cam_Tailcat",
+      "version": "0.6.0",
+      "architecture": "BUILDARCH",
+      "runMode": "respawn",
+      "compatibleOsVersions": [{ "min": "12.10.68", "max": "13" }]
+    },
+    "configuration": {
+      "settingPage": "index.html",
+      "reverseProxy": [
+        {
+          "apiPath": "api",
+          "target": "http://localhost:2208/",
+          "access": "admin"
+        }
+      ]
+    }
+  }
+}
