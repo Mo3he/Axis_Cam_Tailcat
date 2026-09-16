@@ -72,6 +72,75 @@ Download the EAP matching the device architecture from the
 3. Upload the EAP and start the app.
 4. Open the app settings, press **Start**, and copy the address.
 
+## Connecting to the device
+
+The device side is this ACAP. The client side is the
+[tailcat CLI](https://github.com/tailscale/tailcat), which you install on the
+machine you are connecting *from*:
+
+```sh
+brew install tailcat          # macOS
+```
+
+See [INSTALL.md](https://github.com/tailscale/tailcat/blob/main/INSTALL.md)
+upstream for Linux, Windows and the other options.
+
+Everything below takes the address you copied from the app. It is
+**case sensitive**, and `forward` keeps running until you press Ctrl-C, so give
+it a terminal of its own.
+
+### Check you can reach it
+
+```sh
+tailcat ping <tc-addr>
+```
+
+Each reply says whether it arrived directly or through a relay. A relayed path
+still works, it is just rate limited.
+
+### Device web interface
+
+```sh
+tailcat forward <tc-addr> 8443:443
+```
+
+Then open `https://127.0.0.1:8443` and accept the certificate warning. The
+device's certificate is issued for its own name, not `127.0.0.1`, so the
+browser will always complain.
+
+Axis devices redirect port 80 to HTTPS, and that redirect points at an address
+your client cannot resolve. Use 443 as above. For the same reason
+`tailcat browse`, which is a shortcut for port 80, is not useful here.
+
+### SSH
+
+```sh
+tailcat ssh root@<tc-addr>
+```
+
+Requires SSH to be enabled on the device; it is off by default on AXIS OS 11
+and later. The app's **Forwarded ports** panel shows whether port 22 is
+actually listening.
+
+### Video
+
+```sh
+tailcat forward <tc-addr> 8554:554
+ffplay rtsp://root:PASSWORD@127.0.0.1:8554/axis-media/media.amp
+```
+
+Check the UI first and make sure the client is on a direct path. Relayed video
+is unlikely to be watchable.
+
+### Copying files
+
+```sh
+tailcat cp <tc-addr>:/path/to/file .
+```
+
+Uses the device's own SFTP over the tunnel, so the same credentials and the
+same permissions apply as a local login.
+
 ## Configuration
 
 Settings live in **Apps -> Tailcat -> Settings**.
