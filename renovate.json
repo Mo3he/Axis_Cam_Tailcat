@@ -3,8 +3,7 @@
   "extends": ["config:recommended"],
   "dependencyDashboard": true,
   "ignorePaths": [
-    ".github/workflows/build.yml",
-    ".github/workflows/super-linter.yml"
+    ".github/workflows/build.yml"
   ],
   "prConcurrentLimit": 3,
   "prHourlyLimit": 0,
