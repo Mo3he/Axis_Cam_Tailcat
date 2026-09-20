@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.7.0 - 2026-09-20
+
+- Update to upstream 0.7.0.
+
 ## 0.6.0
 
 - Initial pre-release, tracking upstream tailcat v0.6.0.

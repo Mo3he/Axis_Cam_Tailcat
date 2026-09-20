@@ -7,7 +7,7 @@
       "vendor": "moshe@mohome.net",
       "vendorId": "70ee172dd9",
       "vendorUrl": "https://github.com/Mo3he/Axis_Cam_Tailcat",
-      "version": "0.6.0",
+      "version": "0.7.0",
       "architecture": "BUILDARCH",
       "runMode": "respawn",
       "compatibleOsVersions": [
