@@ -101,16 +101,27 @@ still works, it is just rate limited.
 ### Device web interface
 
 ```sh
+tailcat browse <tc-addr>
+```
+
+This forwards the device's port 80 to a local port and opens it in a browser.
+It requires tailcat 0.7.0 or later and port 80 in **Forwarded ports**.
+
+This works even when the device is configured as **HTTPS only**. Such a device
+refuses port 80 on its network interfaces but still listens on `127.0.0.1:80`,
+and the tunnel connects to loopback. Nothing crosses the network in the clear:
+the tailcat tunnel is encrypted end to end, and the plain HTTP hop exists only
+inside the device.
+
+For HTTPS instead:
+
+```sh
 tailcat forward <tc-addr> 8443:443
 ```
 
 Then open `https://127.0.0.1:8443` and accept the certificate warning. The
 device's certificate is issued for its own name, not `127.0.0.1`, so the
 browser will always complain.
-
-Axis devices redirect port 80 to HTTPS, and that redirect points at an address
-your client cannot resolve. Use 443 as above. For the same reason
-`tailcat browse`, which is a shortcut for port 80, is not useful here.
 
 ### SSH
 
