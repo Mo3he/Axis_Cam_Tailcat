@@ -10,13 +10,31 @@ import (
 	"os"
 	"os/signal"
 	"path"
+	"runtime/debug"
 	"strings"
 	"syscall"
 	"time"
 )
 
-// tailcatVersion is reported to the UI.
-var tailcatVersion = "0.6.0"
+// tailcatVersion is reported to the UI; read from the build so it tracks go.mod.
+var tailcatVersion = moduleVersion("github.com/tailscale/tailcat")
+
+func moduleVersion(modulePath string) string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "unknown"
+	}
+	for _, dep := range info.Deps {
+		if dep.Path != modulePath {
+			continue
+		}
+		if dep.Replace != nil {
+			dep = dep.Replace
+		}
+		return strings.TrimPrefix(dep.Version, "v")
+	}
+	return "unknown"
+}
 
 const (
 	apiAddr      = "127.0.0.1:2208"
