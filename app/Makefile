@@ -1,6 +1,5 @@
-# The application binary is cross-compiled by the Go stage in the Dockerfile and
-# copied into this directory before packaging, so there is nothing to compile
-# here. acap-build always invokes make, so these targets exist to satisfy it.
+# The Dockerfile's Go stage copies the binary in; acap-build always runs make,
+# so these targets only satisfy it.
 PROG = Tailcat
 
 .PHONY: all clean

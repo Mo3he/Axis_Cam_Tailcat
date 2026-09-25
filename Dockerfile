@@ -18,9 +18,8 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 COPY daemon ./daemon
-# Trim tags come from the pinned tailcat module itself rather than a copy pasted
-# here, so they stay correct across upstream bumps. ts_omit_ssh drops tailcat's
-# built-in SSH server: this ACAP forwards to the camera's own sshd instead.
+# Trim tags come from the pinned tailcat module so they track upstream bumps.
+# ts_omit_ssh: this ACAP forwards to the camera's own sshd instead.
 RUN set -eux; \
     tags="$(cat "$(go list -m -f '{{.Dir}}' github.com/tailscale/tailcat)/build-tags.txt"),ts_omit_ssh"; \
     if [ "${ARCH}" = "aarch64" ]; then export GOARCH=arm64; else export GOARCH=arm GOARM=7; fi; \

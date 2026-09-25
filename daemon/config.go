@@ -25,17 +25,14 @@ const (
 	AutoStopAbsolute = "absolute"
 )
 
-// Config is the persisted user configuration. It lives as JSON in the app's
-// localdata directory rather than in the camera parameter store, so settings
-// work unchanged on devices that do not expose /axis-cgi/param.cgi (recorders,
-// NVRs, access controllers). See PARAM_CGI_FALLBACK.md in the portfolio root.
+// Config is the persisted user configuration, stored as JSON in localdata (not
+// axparameter) so it works on devices without /axis-cgi/param.cgi.
 type Config struct {
 	AutoStart bool  `json:"autoStart"`
 	Ports     []int `json:"ports"`
 
-	// PinAddress keeps the same tailcat address across restarts by persisting
-	// the private key. When false a fresh ephemeral key is generated on every
-	// start and the previous address dies for good.
+	// PinAddress persists the private key so the address survives restarts;
+	// otherwise each start uses a fresh ephemeral key.
 	PinAddress bool `json:"pinAddress"`
 
 	ExitNodeMode  string   `json:"exitNodeMode"`
@@ -52,9 +49,8 @@ type Config struct {
 	Verbose bool `json:"verbose"`
 }
 
-// DefaultConfig is the safe-by-default state: nothing is exposed until the
-// operator presses Start, the address dies when the tunnel stops, and the
-// camera is not reachable as an exit node.
+// DefaultConfig is safe by default: nothing is exposed until Start, the
+// address dies with the tunnel, and there is no exit node.
 func DefaultConfig() Config {
 	return Config{
 		AutoStart:       false,
@@ -70,7 +66,7 @@ func DefaultConfig() Config {
 }
 
 // Validate normalises the config and rejects values that would produce a
-// surprising tunnel. It is applied to anything arriving from the API.
+// surprising tunnel. Applied to API input and to the stored config on load.
 func (c *Config) Validate() error {
 	seen := map[int]bool{}
 	ports := make([]int, 0, len(c.Ports))

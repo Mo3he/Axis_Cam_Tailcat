@@ -312,9 +312,8 @@
         sel.addRange(range);
       }
 
-      // The async Clipboard API is unavailable over plain HTTP and is rejected
-      // inside the device UI's iframe unless the parent grants clipboard-write,
-      // so fall back to a selection-based copy that works in both cases.
+      // The Clipboard API fails over plain HTTP and in the device UI's iframe
+      // unless the parent grants clipboard-write.
       function legacyCopy(text) {
         const ta = document.createElement("textarea");
         ta.value = text;

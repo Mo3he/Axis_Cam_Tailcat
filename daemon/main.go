@@ -1,10 +1,6 @@
-// Command Tailcat is the ACAP entry binary. It runs a tailcat server that
-// forwards selected camera ports over Tailscale's data plane, and serves the
-// settings/status API consumed by the ACAP web UI.
-//
-// There is no C supervisor and no axparameter use: the camera's manifest
-// reverseProxy points straight at this process, and configuration lives in
-// localdata. That keeps settings working on devices without param.cgi.
+// Command Tailcat is the ACAP entry binary: it forwards selected camera ports
+// over tailcat and serves the web UI API behind the manifest reverseProxy.
+// Config lives in localdata, not axparameter, so it works without param.cgi.
 package main
 
 import (
@@ -19,8 +15,7 @@ import (
 	"time"
 )
 
-// tailcatVersion is reported to the UI. Overridden at build time with
-// -ldflags "-X main.tailcatVersion=...".
+// tailcatVersion is reported to the UI.
 var tailcatVersion = "0.6.0"
 
 const (
@@ -68,10 +63,8 @@ func main() {
 	mgr.Stop()
 }
 
-// newAPI routes on the last path segment. The camera's reverseProxy maps
-// /local/Tailcat/api/... onto this server, and whether it forwards the "api"
-// prefix is not guaranteed, so matching the trailing segment keeps both
-// behaviours working.
+// newAPI routes on the last path segment because the reverseProxy may or may
+// not forward the "api" prefix.
 func newAPI(store *Store, mgr *Manager) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
@@ -125,8 +118,7 @@ func handleSettings(w http.ResponseWriter, r *http.Request, store *Store, mgr *M
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
-		// Apply immediately so the UI never shows settings that differ from
-		// what the live tunnel is actually serving.
+		// Restart so the UI never shows settings the live tunnel isn't serving.
 		if mgr.Status().Running {
 			if err := mgr.Restart(); err != nil {
 				writeError(w, http.StatusInternalServerError, "saved, but restart failed: "+err.Error())

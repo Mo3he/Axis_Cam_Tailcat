@@ -26,13 +26,8 @@ import (
 // slow answer means the service is down rather than far away.
 const dialTimeout = 5 * time.Second
 
-// ClientInfo describes one connected tailcat client for the UI, so an operator
-// can tell whether the address has been used by more peers than expected.
-//
-// Per-path direct/relayed detail is deliberately absent: tailcat's
-// Server.Status builds an ipnstate.StatusBuilder with WantPeers false, and both
-// magicsock and wgengine skip peer reporting in that case, so the peer map is
-// always empty. Tracked here from live connections instead.
+// ClientInfo describes one connected client for the UI. Built from live
+// connections because tailcat's Server.Status never reports peers.
 type ClientInfo struct {
 	Address   string `json:"address"`
 	Active    int    `json:"active"`
@@ -107,7 +102,7 @@ func (t *clientTracker) snapshot() []ClientInfo {
 	return out
 }
 
-// idleSince reports how long the tunnel has had no connection activity.
+// idleSince returns when connection activity last ended, or now if any is open.
 func (t *clientTracker) idleSince() time.Time {
 	t.mu.Lock()
 	defer t.mu.Unlock()
@@ -182,8 +177,7 @@ func NewManager(store *Store, stateDir string) *Manager {
 	}
 }
 
-// Start brings the tunnel up using the current configuration. It is a no-op if
-// the tunnel is already running.
+// Start brings the tunnel up; it is a no-op if already running.
 func (m *Manager) Start() error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -402,9 +396,8 @@ func (m *Manager) onAutoStop(cfg Config) {
 	m.stopLocked()
 }
 
-// loadKey returns the key to serve with. A pinned key is persisted 0600 in
-// localdata and never placed in the camera parameter store, since key plus
-// address is complete tunnel access.
+// loadKey returns the key to serve with. A pinned key is kept 0600 in
+// localdata, never in the parameter store: key plus address is full access.
 func (m *Manager) loadKey(pin bool) (*tailcat.PrivateKey, bool, error) {
 	if !pin {
 		return tailcat.NewPrivateKey(), false, nil
