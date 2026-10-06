@@ -40,6 +40,13 @@
       "matchManagers": ["gomod"],
       "matchPackageNames": ["gvisor.dev/gvisor"],
       "enabled": false
+    },
+    {
+      "description": "A major bump of an indirect module only adds an unused /vN line, since nothing imports the new path.",
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["indirect"],
+      "matchUpdateTypes": ["major"],
+      "enabled": false
     }
   ]
 }
