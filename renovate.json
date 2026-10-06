@@ -18,12 +18,10 @@
       "dependencyDashboardApproval": true
     },
     {
-      "description": "Transitive Go modules are off by default; enable so CVE fixes can land.",
+      "description": "Indirect modules come from tailscale.com, so let Tailscale pick the tested versions. Bumping them separately ran wireguard-go and bart past what Tailscale ships with.",
       "matchManagers": ["gomod"],
       "matchDepTypes": ["indirect"],
-      "enabled": true,
-      "groupName": "Go indirect dependencies",
-      "groupSlug": "go-indirect-dependencies"
+      "enabled": false
     },
     {
       "description": "Review Tailcat and Tailscale changes independently.",
@@ -39,13 +37,6 @@
       "description": "gvisor is only go-gettable from its generated 'go' branch. Master pseudo-versions ship test files that collide with the package they sit in (found packages stack and bridge in pkg/tcpip/stack), so an automated bump always breaks the build.",
       "matchManagers": ["gomod"],
       "matchPackageNames": ["gvisor.dev/gvisor"],
-      "enabled": false
-    },
-    {
-      "description": "A major bump of an indirect module only adds an unused /vN line, since nothing imports the new path.",
-      "matchManagers": ["gomod"],
-      "matchDepTypes": ["indirect"],
-      "matchUpdateTypes": ["major"],
       "enabled": false
     }
   ]
