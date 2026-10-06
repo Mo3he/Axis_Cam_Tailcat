@@ -174,6 +174,8 @@ github.com/tailscale/wf v0.0.0-20240214030419-6fbb0a674ee6 h1:l10Gi6w9jxvinoiq15
 github.com/tailscale/wf v0.0.0-20240214030419-6fbb0a674ee6/go.mod h1:ZXRML051h7o4OcI0d3AaILDIad/Xw0IkXaHM17dic1Y=
 github.com/tailscale/wireguard-go v0.0.0-20260911194433-e3222a3340cd h1:7l7Aru/QMwjoWvfvnTEiX3gG+ixhN5WAFENxHcA9NlI=
 github.com/tailscale/wireguard-go v0.0.0-20260911194433-e3222a3340cd/go.mod h1:rUelGmuK4UnSJYM5gl5Mknp6YbwwcL8+VAPMhNYe+jg=
+github.com/tailscale/wireguard-go v0.0.0-20260928213032-417aef361226 h1:v3Lpj2iHPWQDqeCwemQPz4fWweIEMLqBkwJqCjRyJQc=
+github.com/tailscale/wireguard-go v0.0.0-20260928213032-417aef361226/go.mod h1:rUelGmuK4UnSJYM5gl5Mknp6YbwwcL8+VAPMhNYe+jg=
 github.com/tailscale/xnet v0.0.0-20240729143630-8497ac4dab2e h1:zOGKqN5D5hHhiYUp091JqK7DPCqSARyUfduhGUY8Bek=
 github.com/tailscale/xnet v0.0.0-20240729143630-8497ac4dab2e/go.mod h1:orPd6JZXXRyuDusYilywte7k094d7dycXXU5YnWsrwg=
 github.com/u-root/gobusybox/src v0.0.0-20250101170133-2e884e4509c7 h1:dtiVT4SeBUc/vHtwI2HjDZN+FCKTstQBxugIxJEGo9g=
@@ -232,3 +234,5 @@ software.sslmate.com/src/go-pkcs12 v0.7.3 h1:JBQD3FDqYjTeyDAeZQklj2ar88ykBLtALlo
 software.sslmate.com/src/go-pkcs12 v0.7.3/go.mod h1:Qiz0EyvDRJjjxGyUQa2cCNZn/wMyzrRJ/qcDXOQazLI=
 tailscale.com v1.103.0-pre.0.20260920180204-3014ad828eff h1:Ga8Gpd4e4yPjAISd3V9D1oJ9h1S6xYqoFvG71UIwYZE=
 tailscale.com v1.103.0-pre.0.20260920180204-3014ad828eff/go.mod h1:oUmJ/nA/pTiEi4J7pOaPdEL6Bxi+OhgIXGkz1KdPAjA=
+tailscale.com v1.104.0 h1:7LgglawekeutAexqXUzSxP/Kqo3HHwF/SkcbX5HpiU4=
+tailscale.com v1.104.0/go.mod h1:Cb1XjScRgSOeRD7NW6uCEznme782WiOU9IxqyTWoRf0=
