@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Security: build with Go 1.27.3, which distrusts the compromised eMudhra TLS
+  intermediate certificates
+  ([TS-2026-013](https://tailscale.com/security-bulletins#ts-2026-013)).
+  Tailcat fetches the DERP map and connects to DERP relays over TLS, so a
+  certificate from those intermediates could redirect or disrupt relaying.
+  Forwarded traffic stays WireGuard-encrypted end to end.
+- The Go builder image is now pinned to a patch release (`1.27.3`) instead of
+  the floating `1.27` tag, so a cached older image cannot be reused.
+
 ## 0.7.0 - 2026-09-20
 
 - Update to upstream 0.7.0.
