@@ -18,6 +18,18 @@
       "dependencyDashboardApproval": true
     },
     {
+      "description": "Hold the SDK on its current minor (12.10.x). 12.11+ raises the AXIS OS floor (12.11.147), so remove this rule only when deliberately moving up.",
+      "matchDatasources": ["docker"],
+      "matchPackageNames": [
+        "axisecp/acap-native-sdk",
+        "axisecp/acap-sdk",
+        "docker.io/axisecp/acap-native-sdk",
+        "docker.io/axisecp/acap-sdk"
+      ],
+      "matchUpdateTypes": ["major", "minor"],
+      "enabled": false
+    },
+    {
       "description": "Indirect modules come from tailscale.com, so let Tailscale pick the tested versions. Bumping them separately ran wireguard-go and bart past what Tailscale ships with.",
       "matchManagers": ["gomod"],
       "matchDepTypes": ["indirect"],
