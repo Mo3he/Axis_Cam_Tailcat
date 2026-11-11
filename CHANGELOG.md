@@ -10,6 +10,7 @@
   Forwarded traffic stays WireGuard-encrypted end to end.
 - The Go builder image is now pinned to a patch release (`1.27.3`) instead of
   the floating `1.27` tag, so a cached older image cannot be reused.
+- Update tailscale.com to 1.104.6.
 
 ## 0.7.0 - 2026-09-20
 
