@@ -226,7 +226,7 @@ func (m *Manager) Start() error {
 		return func(c net.Conn) {
 			key := m.clients.open(c.RemoteAddr())
 			defer m.clients.close(key)
-			proxyTCP(c, fmt.Sprintf("127.0.0.1:%d", port), logf)
+			proxyCamera(c, port, logf)
 		}
 	}
 
@@ -438,16 +438,31 @@ func (m *Manager) ForgetKey() error {
 	return nil
 }
 
-// proxyTCP splices a tunnel connection onto a local service, propagating
-// half-close so request/response protocols that signal with EOF still work.
+// proxyTCP splices a tunnel connection onto target, propagating half-close so
+// request/response protocols that signal with EOF still work.
 func proxyTCP(client net.Conn, target string, logf logger.Logf) {
-	defer client.Close()
-
 	upstream, err := net.DialTimeout("tcp", target, dialTimeout)
 	if err != nil {
+		client.Close()
 		logf("dial %s: %v", target, err)
 		return
 	}
+	splice(client, upstream)
+}
+
+// proxyCamera splices a tunnel connection onto a camera port.
+func proxyCamera(client net.Conn, port uint16, logf logger.Logf) {
+	upstream, err := dialCamera(int(port))
+	if err != nil {
+		client.Close()
+		logf("dial camera port %d: %v", port, err)
+		return
+	}
+	splice(client, upstream)
+}
+
+func splice(client, upstream net.Conn) {
+	defer client.Close()
 	defer upstream.Close()
 
 	done := make(chan struct{}, 2)
