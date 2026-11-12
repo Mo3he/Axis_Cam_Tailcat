@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Fix HTTPS through the tunnel on AXIS OS 13. Its web server answers
+  `127.0.0.1` in plain HTTP on every port, 443 included, so HTTPS to the
+  camera through the tunnel failed. Forwarded ports now connect to `[::1]`,
+  which every AXIS OS version serves like the network (with TLS on 443), and
+  fall back to `127.0.0.1` for services that listen only there (such as port
+  80 on an HTTPS-only device).
 - Security: build with Go 1.27.3, which distrusts the compromised eMudhra TLS
   intermediate certificates
   ([TS-2026-013](https://tailscale.com/security-bulletins#ts-2026-013)).
