@@ -109,9 +109,9 @@ It requires tailcat 0.7.0 or later and port 80 in **Forwarded ports**.
 
 This works even when the device is configured as **HTTPS only**. Such a device
 refuses port 80 on its network interfaces but still listens on `127.0.0.1:80`,
-and the tunnel falls back to loopback when a port is refused. Nothing crosses
-the network in the clear: the tailcat tunnel is encrypted end to end, and the
-plain HTTP hop exists only inside the device.
+and the tunnel connects to loopback. Nothing crosses the network in the clear:
+the tailcat tunnel is encrypted end to end, and the plain HTTP hop exists only
+inside the device.
 
 For HTTPS instead:
 
