@@ -1,7 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.7.1 - 2026-11-13
 
+- Update to upstream 0.7.0.
 - Fix HTTPS through the tunnel on AXIS OS 13. Its web server answers
   `127.0.0.1` in plain HTTP on every port, 443 included, so HTTPS to the
   camera through the tunnel failed. Forwarded ports now connect to `[::1]`,
