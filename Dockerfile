@@ -6,7 +6,7 @@
 ARG ARCH=aarch64
 # tailcat's go.mod requires >= 1.27.1. 1.27.3 is the floor for TS-2026-013
 # (distrusts the compromised eMudhra intermediates). Renovate bumps this pin.
-ARG GO_VERSION=1.27.3
+ARG GO_VERSION=1.27.4
 ARG SDK_VERSION=12.10.0
 ARG UBUNTU_VERSION=24.04
 ARG SDK_REPO=axisecp
