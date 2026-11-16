@@ -1,10 +1,10 @@
 module github.com/Mo3he/Axis_Cam_Tailcat
 
-go 1.27.3
+go 1.27.4
 
 require (
 	github.com/tailscale/tailcat v0.7.0
-	tailscale.com v1.104.6
+	tailscale.com v1.104.7
 )
 
 require (
