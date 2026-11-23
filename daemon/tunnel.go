@@ -276,13 +276,17 @@ func (m *Manager) Start() error {
 		}
 	}
 
+	var allowedClients tailcat.KeySet
 	for _, raw := range cfg.AllowedClients {
 		var k key.NodePublic
 		if err := k.UnmarshalText([]byte(raw)); err != nil {
 			m.lastErr = fmt.Sprintf("invalid client key %q", raw)
 			return fmt.Errorf("invalid client key %q: %w", raw, err)
 		}
-		srv.AllowedClients = append(srv.AllowedClients, k)
+		allowedClients.Add(k)
+	}
+	if len(cfg.AllowedClients) > 0 {
+		srv.AllowClient = allowedClients.Contains
 	}
 
 	if err := srv.Start(); err != nil {
