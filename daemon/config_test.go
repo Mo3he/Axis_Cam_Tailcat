@@ -1,8 +1,10 @@
 package main
 
 import (
+	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -120,5 +122,36 @@ func TestStoreRoundTripsAndIsolatesCopies(t *testing.T) {
 	}
 	if reopened.Get().AutoStopMinutes != 30 {
 		t.Error("auto-stop minutes did not persist")
+	}
+}
+
+func TestSetRejectsInvalidClientKeysButLoadKeepsThem(t *testing.T) {
+	dir := t.TempDir()
+	store, err := NewStore(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	bad := DefaultConfig()
+	bad.AllowedClients = []string{"nodekey:1234"}
+	if err := store.Set(bad); err == nil {
+		t.Fatal("an invalid client key was saved")
+	}
+	good := DefaultConfig()
+	good.AllowedClients = []string{"nodekey:" + strings.Repeat("ab", 32)}
+	if err := store.Set(good); err != nil {
+		t.Fatalf("a valid client key was refused: %v", err)
+	}
+
+	// A list saved by an older version still loads unchanged.
+	stored := `{"allowedClients":["nodekey:1234"],"ports":[80],"exitNodeMode":"off","autoStopMode":"off"}`
+	if err := os.WriteFile(filepath.Join(dir, "config.json"), []byte(stored), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	reloaded, err := NewStore(dir)
+	if err != nil {
+		t.Fatalf("stored config no longer loads: %v", err)
+	}
+	if got := reloaded.Get().AllowedClients; len(got) != 1 {
+		t.Fatalf("stored allow-list changed on load: %v", got)
 	}
 }

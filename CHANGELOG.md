@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- An allowed client entry that is not a node key (`nodekey:` and 64 hex digits)
+  is refused when saving, with the reason shown. Before, it was saved and the
+  tunnel then failed to start, silently at boot with Start automatically on.
+  Lists saved by older versions still load as they are.
+
 ## 0.8.0 - 2026-11-23
 
 - Update to upstream 0.8.0.
