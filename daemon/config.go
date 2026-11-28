@@ -9,6 +9,8 @@ import (
 	"slices"
 	"strings"
 	"sync"
+
+	"tailscale.com/types/key"
 )
 
 // Exit node modes.
@@ -157,8 +159,24 @@ func (s *Store) Get() Config {
 	return s.cfg.clone()
 }
 
+// validateClientKeys rejects allow-list entries that are not node keys. Only
+// new settings are checked: a stored list is never trimmed on load, since an
+// emptied list would allow every client.
+func (c *Config) validateClientKeys() error {
+	for _, raw := range c.AllowedClients {
+		var k key.NodePublic
+		if err := k.UnmarshalText([]byte(raw)); err != nil {
+			return fmt.Errorf("allowed client %q is not a node key (nodekey:<64 hex digits>)", raw)
+		}
+	}
+	return nil
+}
+
 func (s *Store) Set(cfg Config) error {
 	if err := cfg.Validate(); err != nil {
+		return err
+	}
+	if err := cfg.validateClientKeys(); err != nil {
 		return err
 	}
 	s.mu.Lock()
